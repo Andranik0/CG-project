@@ -3,6 +3,14 @@
  * @author : AG
  * 
 */
+
+/* PARAMÈTRES -----------------------------------------------------------------------------*/
+
+var RADIUS = 2000; // Définir le rayon de la zone d'action
+var NUMBER_OF_FRIENDS = 5; // Définir le nombre de personnes se rencontrant
+
+
+/* ----------------------------------------------------------------------------------------*/
 var images = ['./img/boy.png', './img/girl.png'];
 var markers = [];
 var people = [{nom:"Yorick", poste:"FOUNDER & CEO", desc:"Yorick manages the CampusGroups team and also participates in developments and sales. Prior to launching CampusGroups, Yorick accumulated 10 years of experience in Web development, IT consulting and trading at large corporations such as JPMorgan, Accenture and AXA. Yorick earned a Nuclear Engineering Degree from Centrale Marseille (France) and his MBA from NYU Stern School of Business."},
@@ -16,7 +24,7 @@ function initMap() {
 	var empireSbuilding = {lat: 40.748441, lng: -73.985664};
     var map = new google.maps.Map(document.getElementById('map'), {center: empireSbuilding, zoom: 14});
    
-    generateRandomMarkers(5, empireSbuilding, 2000, map);
+    generateRandomMarkers(NUMBER_OF_FRIENDS, empireSbuilding, RADIUS, map);
     
 }
 
@@ -31,12 +39,11 @@ function generateRandomMarkers(nombre, centre, rayon, carte){
 	 for(i=0;i<nombre;i++){
 		 var point = randomGeoCoord(centre,rayon);
 		 // On ajoute au tableau markers chaque nouveau marqueur (qui s'ajoute à la carte en même temps)
-		 var marker = new google.maps.Marker({position:new google.maps.LatLng(point.lat,point.lng), map: carte, icon:images[i % 2], title:"Ami n°"+(i+1)});
+		 var marker = new google.maps.Marker({position:new google.maps.LatLng(point.lat,point.lng), map: carte, icon:images[i % 2], title:"Ami n°"+(i+1), dist:point.dist});
 		 addInfoMarker(marker,i);
 		 markers.push(marker);
 	 }
 }
-
 
 /* -> Retourne un couple latitude/longitude aléatoire 
  * @ rayon : le rayon (en mètres) de la zone dans laquelle les coordonnées sont bornées
@@ -89,15 +96,17 @@ function addInfoMarker(marker, index){
 	  '<img class="imageProfil" src="./img/user'+index+'.jpg" alt="PhotoProfil"/>'+
       '<div id="titleContent"><h1 id="firstHeading" class="firstHeading">'+people[index].nom+'</h1>'+
       '<h2>'+people[index].poste+'</h2></div> <div id="bodyContent"><p>'+people[index].desc+'</p>'+
-      '</div> <p><b>DISTANCE :</b> situé(e) à <b>'+1+'</b>m de l\'Empire State Building'+
-      '<br/><br/> <i>LATITUDE :</i> '+ 17 +
-      '<br/> <i>LONGITUDE :</i> '+-73+'</p></div>';
+      '</div> <p><b>DISTANCE :</b> situé(e) à <b>'+marker['dist'].toFixed(0)+'</b>m de l\'Empire State Building'+
+      '<br/><br/> <i>POSITION : </i>'+marker['position']+'</p></div>';
 
 	  var infowindow = new google.maps.InfoWindow({
 	    content: contentString
 	  });
 	
 	  marker.addListener('click', function() {
-	    infowindow.open(map, marker);
+		  // On s'arrange pour fermer la fenêtre précédente à l'ouverture d'une nouvelle
+		  if (typeof( window.infoopened ) != 'undefined') infoopened.close();
+		  infowindow.open(map, marker);
+	      infoopened = infowindow;
 	  });
 }
