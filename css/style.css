@@ -14,5 +14,21 @@ html, body {
 #map {
    height: 100%;
 }
- 
-     
+
+/* Style des infobulles */
+
+.imageProfil{
+	display:inline-block;
+	border-radius:50px;
+	vertical-align:top;
+}
+
+#content{
+	text-align:center;
+}
+
+#titleContent{
+	display:inline-block;
+	margin-left:45px;
+	margin-top:30px;
+}
