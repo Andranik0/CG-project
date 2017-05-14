@@ -4,28 +4,45 @@
  * 
 */
 
-/* PARAMÈTRES -----------------------------------------------------------------------------*/
+/* PARAMÈTRES GLOBAUX -----------------------------------------------------------------------------------------------------*/
 
 var RADIUS = 2000; // Définir le rayon de la zone d'action
 var NUMBER_OF_FRIENDS = 5; // Définir le nombre de personnes se rencontrant
+var CENTER = {lat: 40.748441, lng: -73.985664}; // Définir le centre de la carte (Il s'agit ici de l'Empire State Building
 
+/* -----------------------------------------------------------------------------------------------------------------------*/
 
-/* ----------------------------------------------------------------------------------------*/
-var images = ['./img/boy.png', './img/girl.png'];
-var markers = [];
+var images = ['./img/boy.png', './img/girl.png']; // Tableau d'images des icones affichées sur la carte
+var markers = []; // Tableau des marqueurs affichés sur la carte
+
+// Tableau de données des personnes affichées sur la carte
 var people = [{nom:"Yorick", poste:"FOUNDER & CEO", desc:"Yorick manages the CampusGroups team and also participates in developments and sales. Prior to launching CampusGroups, Yorick accumulated 10 years of experience in Web development, IT consulting and trading at large corporations such as JPMorgan, Accenture and AXA. Yorick earned a Nuclear Engineering Degree from Centrale Marseille (France) and his MBA from NYU Stern School of Business."},
 	  {nom:"Claire", poste:"CAMPUS RELATIONS", desc:"Claire is a young professional, close to students needs. She has an Engineering Degree in Computer Science from the Engineering School of Polytech Nice-Sophia, and a Master of Business Administration from Nice College (France), Marketing & Management major. She has had professional experiences in computer science, marketing and communication. She uses all these skills in her daily work at CampusGroups: development, maintenance of the CampusGroups platform and also clients relationship management."},
 	  {nom:"Richard", poste:"UI DESIGNER", desc:"Richard is a graphic designer from the United Kingdom with experience in Birmingham and London before relocating to Paris, France. He worked in Central London for two and a half years at a web media company before joining CampusGroups in 2011. Richard has a strong passion for all things creative and always looking into new ways to use design to communicate. Illustration also plays its part in what Richard pursues along with writing for his blog."},
 	  {nom:"Laura", poste:"WEB DEVELOPER", desc:"Laura graduated from EPITA, a well known computer engineering school in Paris, France. She enjoys travelling and most recently spent time at Czech Technical University in Prague. Laura has had experience in managing students clubs and she knows how easy it can be when using the right tools. Laura is dedicated to helping students achieve successful outcomes, in the development of the CampusGroups platform."},
 	  {nom:"Erwann", poste:"WEB DESIGNER", desc:"Erwann was the first designer of the CampusGroups graphic interface back in 2005. He is now partnering with Richard on all graphic design and integration aspects of CampusGroups. Erwann is passionate about design, Web standards and visual arts in general."}];
 
+/* -----------------------------------------------------------------------------------------------------------------------*/
+
 /* -> VOID - Génère la carte et toutes les données lui étant liées */
 function initMap() {
-	var empireSbuilding = {lat: 40.748441, lng: -73.985664};
-    var map = new google.maps.Map(document.getElementById('map'), {center: empireSbuilding, zoom: 14});
+	// Création de la carte GoogleMaps, définition du centre et du zoom qui conviennent 
+    var map = new google.maps.Map(document.getElementById('map'), {center: CENTER, zoom: 14});
    
-    generateRandomMarkers(NUMBER_OF_FRIENDS, empireSbuilding, RADIUS, map);
+    // Fait appel à generateRandomMarkers() pour générer les marqueurs aléatoirement sur la carte
+    generateRandomMarkers(NUMBER_OF_FRIENDS, CENTER, RADIUS, map);
     
+    // Création du bouton permettant de contrôler CenterControl
+    var centerControlDiv = document.createElement('div');
+    var centerControl = new CenterControl(centerControlDiv, map);
+    centerControlDiv.index = 1;
+    map.controls[google.maps.ControlPosition.TOP_CENTER].push(centerControlDiv);
+    
+    // Création du bouton permettant de contrôler CircleControl
+    var circleControlDiv = document.createElement('div');
+    var circleControl = new CircleControl(circleControlDiv, map);
+    circleControlDiv.index = 1;
+    map.controls[google.maps.ControlPosition.TOP_RIGHT].push(circleControlDiv);
 }
 
 /*	-> VOID - Génère les marqueurs sur la carte
@@ -108,5 +125,84 @@ function addInfoMarker(marker, index){
 		  if (typeof( window.infoopened ) != 'undefined') infoopened.close();
 		  infowindow.open(map, marker);
 	      infoopened = infowindow;
+	  });
+}
+
+/* -> VOID - Au clic sur le bouton de l'UI, dessine un cercle de rayon RADIUS et de centre CENTER
+ * @map        : la carte sur laquelle dessiner le cercle
+ * @controlDiv : le bouton permettant de contrôler l'événement
+ */
+function CircleControl(controlDiv,map){
+	  // CSS pour la bordure du bouton de contrôle
+	  var controlUI = document.createElement('div');
+	  controlUI.style.backgroundColor = '#fff';
+	  controlUI.style.border = '2px solid #fff';
+	  controlUI.style.borderRadius = '3px';
+	  controlUI.style.boxShadow = '0 2px 6px rgba(0,0,0,.3)';
+	  controlUI.style.cursor = 'pointer';
+	  controlUI.style.marginBottom = '22px';
+	  controlUI.style.textAlign = 'center';
+	  controlUI.title = 'Cliquer pour afficher la zone d\'action';
+	  controlDiv.appendChild(controlUI);
+
+	  // CSS pour l'intérieur du bouton de contrôle
+	  var controlText = document.createElement('div');
+	  controlText.style.color = 'rgb(25,25,25)';
+	  controlText.style.fontFamily = 'Roboto,Arial,sans-serif';
+	  controlText.style.fontSize = '16px';
+	  controlText.style.lineHeight = '38px';
+	  controlText.style.paddingLeft = '5px';
+	  controlText.style.paddingRight = '5px';
+	  controlText.innerHTML = 'Afficher la zone d\'action';
+	  controlUI.appendChild(controlText);
+
+	  // Au clic sur le bouton Afficher, fait apparaître la zone d'action
+	  controlUI.addEventListener('click', function() {
+		  var circle = new google.maps.Circle({
+			    strokeColor: '#5E9DE5',
+			    strokeOpacity: 0.5,
+			    strokeWeight: 2,
+			    fillColor: '#5E9DE5',
+			    fillOpacity: 0.1,
+			    map: map,
+			    center: CENTER,
+			    radius: RADIUS
+		  });
+	  });		
+}
+
+
+/* -> VOID - Au clic sur le bouton de l'UI, recentre la carte
+ * @controlDiv : le bouton permettant de contrôler l'événement
+ * @map        : la carte concernée par l'événement décrit
+ */
+function CenterControl(controlDiv, map) {
+
+	// CSS pour la bordure du bouton de contrôle
+	  var controlUI = document.createElement('div');
+	  controlUI.style.backgroundColor = '#fff';
+	  controlUI.style.border = '2px solid #fff';
+	  controlUI.style.borderRadius = '3px';
+	  controlUI.style.boxShadow = '0 2px 6px rgba(0,0,0,.3)';
+	  controlUI.style.cursor = 'pointer';
+	  controlUI.style.marginBottom = '22px';
+	  controlUI.style.textAlign = 'center';
+	  controlUI.title = 'Cliquer pour recentrer la carte';
+	  controlDiv.appendChild(controlUI);
+
+	  // CSS pour l'intérieur du bouton de contrôle
+	  var controlText = document.createElement('div');
+	  controlText.style.color = 'rgb(25,25,25)';
+	  controlText.style.fontFamily = 'Roboto,Arial,sans-serif';
+	  controlText.style.fontSize = '16px';
+	  controlText.style.lineHeight = '38px';
+	  controlText.style.paddingLeft = '5px';
+	  controlText.style.paddingRight = '5px';
+	  controlText.innerHTML = 'Centrer';
+	  controlUI.appendChild(controlText);
+
+	  // Au clic sur le bouton Centrer, centre la carte sur CENTER
+	  controlUI.addEventListener('click', function() {
+	    map.setCenter(CENTER);
 	  });
 }
