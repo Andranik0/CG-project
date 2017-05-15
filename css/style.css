@@ -22,6 +22,31 @@ html, body {
 	opacity:0.5;
 }
 
+/* Style des boutons de l'UI */
+
+#controlUI{
+	background:#fff;
+	border: 2px solid #fff;
+	border-radius: 30px;
+	box-shadow: 0 2px 6px rgba(0,0,0,.3);
+	cursor: pointer;
+	margin-bottom: 22px;
+	margin-left: 10px;
+	margin-right: 10px;
+	text-align: center;
+	
+ 	color: rgb(25,25,25);
+	font-family: Roboto,Arial,sans-serif;
+	font-size: 16px;
+	line-height: 38px;
+	padding-left: 5px;
+	padding-right: 5px;
+}
+
+#controlUI:hover{
+	opacity:0.9;
+}
+
 /* Style des infobulles */
 
 .imageProfil{
