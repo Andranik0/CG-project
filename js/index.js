@@ -12,8 +12,10 @@ var CENTER = {lat: 40.748441, lng: -73.985664}; // Définir le centre de la cart
 
 /* -----------------------------------------------------------------------------------------------------------------------*/
 
-var images = ['./img/boy.png', './img/girl.png']; // Tableau d'images des icones affichées sur la carte
+var images = ['./img/boy.png', './img/girl.png', './img/center-icon.png', './img/friends-off.png', './img/friends-on.png']; // Tableau d'images des icones affichées sur la carte
 var markers = []; // Tableau des marqueurs affichés sur la carte
+var circle; // Cercle de la zone d'action (sur laquelle les marqueurs peuvent être aléatoirement positionnés)
+var circleFriends; // Cercle montrant la distance relative des marqueurs positionnés sur la carte
 
 // Tableau de données des personnes affichées sur la carte
 var people = [{nom:"Yorick", poste:"FOUNDER & CEO", desc:"Yorick manages the CampusGroups team and also participates in developments and sales. Prior to launching CampusGroups, Yorick accumulated 10 years of experience in Web development, IT consulting and trading at large corporations such as JPMorgan, Accenture and AXA. Yorick earned a Nuclear Engineering Degree from Centrale Marseille (France) and his MBA from NYU Stern School of Business."},
@@ -38,11 +40,18 @@ function initMap() {
     centerControlDiv.index = 1;
     map.controls[google.maps.ControlPosition.TOP_CENTER].push(centerControlDiv);
     
+    // Création du bouton permettant de contrôler CircleFriendsControl
+    var circleFriendsControlDiv = document.createElement('div');
+    var circleFriendsControl = new CircleFriendsControl(circleFriendsControlDiv, map);
+    circleFriendsControlDiv.index = 1;
+    map.controls[google.maps.ControlPosition.TOP_RIGHT].push(circleFriendsControlDiv);
+    
     // Création du bouton permettant de contrôler CircleControl
     var circleControlDiv = document.createElement('div');
     var circleControl = new CircleControl(circleControlDiv, map);
     circleControlDiv.index = 1;
     map.controls[google.maps.ControlPosition.TOP_RIGHT].push(circleControlDiv);
+    
 }
 
 /*	-> VOID - Génère les marqueurs sur la carte
@@ -110,7 +119,7 @@ function distance(latA, lngA, latB, lngB) {
 function addInfoMarker(marker, index){
 	  // Contenu de l'infobulle adapté à chaque marqueur
 	  var contentString = '<div id="content"><div id="siteNotice"></div>'+
-	  '<img class="imageProfil" src="./img/user'+index+'.jpg" alt="PhotoProfil"/>'+
+	  '<img class="imageProfil" src="./img/users/user'+index+'.jpg" alt="PhotoProfil"/>'+
       '<div id="titleContent"><h1 id="firstHeading" class="firstHeading">'+people[index].nom+'</h1>'+
       '<h2>'+people[index].poste+'</h2></div> <div id="bodyContent"><p>'+people[index].desc+'</p>'+
       '</div> <p><b>DISTANCE :</b> situé(e) à <b>'+marker['dist'].toFixed(0)+'</b>m de l\'Empire State Building'+
@@ -133,6 +142,8 @@ function addInfoMarker(marker, index){
  * @controlDiv : le bouton permettant de contrôler l'événement
  */
 function CircleControl(controlDiv,map){
+	  var textesBtn = ['Cliquer pour afficher la zone d\'action','Afficher la zone d\'action','Cliquer pour masquer la zone d\'action','Masquer la zone d\'action'];
+	
 	  // CSS pour la bordure du bouton de contrôle
 	  var controlUI = document.createElement('div');
 	  controlUI.style.backgroundColor = '#fff';
@@ -142,7 +153,7 @@ function CircleControl(controlDiv,map){
 	  controlUI.style.cursor = 'pointer';
 	  controlUI.style.marginBottom = '22px';
 	  controlUI.style.textAlign = 'center';
-	  controlUI.title = 'Cliquer pour afficher la zone d\'action';
+	  controlUI.title = textesBtn[0];
 	  controlDiv.appendChild(controlUI);
 
 	  // CSS pour l'intérieur du bouton de contrôle
@@ -153,24 +164,33 @@ function CircleControl(controlDiv,map){
 	  controlText.style.lineHeight = '38px';
 	  controlText.style.paddingLeft = '5px';
 	  controlText.style.paddingRight = '5px';
-	  controlText.innerHTML = 'Afficher la zone d\'action';
+	  controlText.innerHTML = textesBtn[1];
 	  controlUI.appendChild(controlText);
 
 	  // Au clic sur le bouton Afficher, fait apparaître la zone d'action
 	  controlUI.addEventListener('click', function() {
-		  var circle = new google.maps.Circle({
-			    strokeColor: '#5E9DE5',
-			    strokeOpacity: 0.5,
-			    strokeWeight: 2,
-			    fillColor: '#5E9DE5',
-			    fillOpacity: 0.1,
-			    map: map,
-			    center: CENTER,
-			    radius: RADIUS
-		  });
+		  if(circle==null){
+			  circle = new google.maps.Circle({
+				    strokeColor: '#5E9DE5',
+				    strokeOpacity: 0.5,
+				    strokeWeight: 2,
+				    fillColor: '#5E9DE5',
+				    fillOpacity: 0.1,
+				    map: map,
+				    center: CENTER,
+				    radius: RADIUS
+			  });
+			  controlUI.title = textesBtn[2];
+			  controlText.innerHTML = textesBtn[3] ;
+		  }
+		  else{
+			  circle.setMap(null);
+			  circle = null;
+			  controlUI.title =  textesBtn[0];
+			  controlText.innerHTML =  textesBtn[1];
+		  }
 	  });		
 }
-
 
 /* -> VOID - Au clic sur le bouton de l'UI, recentre la carte
  * @controlDiv : le bouton permettant de contrôler l'événement
@@ -198,11 +218,79 @@ function CenterControl(controlDiv, map) {
 	  controlText.style.lineHeight = '38px';
 	  controlText.style.paddingLeft = '5px';
 	  controlText.style.paddingRight = '5px';
-	  controlText.innerHTML = 'Centrer';
+	  controlText.innerHTML = '<img  class="icon" src="'+images[2]+'" alt="rencentrer" /> Centrer';
 	  controlUI.appendChild(controlText);
 
 	  // Au clic sur le bouton Centrer, centre la carte sur CENTER
 	  controlUI.addEventListener('click', function() {
 	    map.setCenter(CENTER);
 	  });
+}
+
+/* -> VOID - Au clic sur le bouton de l'UI, dessine un cercle de rayon "distance de l'ami le plus éloigné du point de rencontre" et de centre CENTER
+ * @map        : la carte sur laquelle dessiner le cercle
+ * @controlDiv : le bouton permettant de contrôler l'événement
+ */
+function CircleFriendsControl(controlDiv,map){
+	  var textesBtn = ['Cliquer pour afficher le cercle de l\'amitié','<img class="icon" src="'+images[3]+'" alt="amis"/>','Cliquer pour masquer le cercle de l\'amitié','<img  class="icon" src="'+images[4]+'" alt="amis"/>'];
+	
+	  // CSS pour la bordure du bouton de contrôle
+	  var controlUI = document.createElement('div');
+	  controlUI.style.backgroundColor = '#fff';
+	  controlUI.style.border = '2px solid #fff';
+	  controlUI.style.borderRadius = '30px';
+	  controlUI.style.boxShadow = '0 2px 6px rgba(0,0,0,.3)';
+	  controlUI.style.cursor = 'pointer';
+	  controlUI.style.marginBottom = '22px';
+	  controlUI.style.marginLeft = '10px';
+	  controlUI.style.marginRight = '10px';
+	  controlUI.style.textAlign = 'center';
+	  
+	  controlUI.title = textesBtn[0];
+	  controlDiv.appendChild(controlUI);
+
+	  // CSS pour l'intérieur du bouton de contrôle
+	  var controlText = document.createElement('div');
+	  controlText.style.color = 'rgb(25,25,25)';
+	  controlText.style.fontFamily = 'Roboto,Arial,sans-serif';
+	  controlText.style.fontSize = '16px';
+	  controlText.style.lineHeight = '38px';
+	  controlText.style.paddingLeft = '5px';
+	  controlText.style.paddingRight = '5px';
+	  controlText.innerHTML = textesBtn[1];
+	  controlUI.appendChild(controlText);
+
+	  // Au clic sur le bouton Afficher, fait apparaître la zone d'action
+	  controlUI.addEventListener('click', function() {
+		  if(circleFriends==null){
+			  var rayon = 0;
+			  
+			  // Déterminer le rayon du cerlce à tracer
+			  for(i=0;i<markers.length;i++){
+				  if(markers[i].dist>rayon){
+					  rayon = markers[i].dist;
+				  }
+			  }
+			  
+			  // Création du cercle
+			  circleFriends = new google.maps.Circle({
+				    strokeColor: '#40A47C',
+				    strokeOpacity: 0.5,
+				    strokeWeight: 2,
+				    fillColor: '#40A47C',
+				    fillOpacity: 0.1,
+				    map: map,
+				    center: CENTER,
+				    radius: rayon
+			  });
+			  controlUI.title = textesBtn[2];
+			  controlText.innerHTML = textesBtn[3] ;
+		  }
+		  else{
+			  circleFriends.setMap(null);
+			  circleFriends = null;
+			  controlUI.title =  textesBtn[0];
+			  controlText.innerHTML =  textesBtn[1];
+		  }
+	  });		
 }
