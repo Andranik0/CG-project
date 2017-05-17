@@ -34,6 +34,9 @@ function initMap() {
     // Fait appel à generateRandomMarkers() pour générer les marqueurs aléatoirement sur la carte
     generateRandomMarkers(NUMBER_OF_FRIENDS, CENTER, RADIUS, map);
     
+    
+    /* Gestion de l'UI */
+    
     // Création du bouton permettant de contrôler CenterControl
     var centerControlDiv = document.createElement('div');
     var centerControl = new CenterControl(centerControlDiv, map);
@@ -58,6 +61,24 @@ function initMap() {
     addMarkerControlDiv.index = 1;
     map.controls[google.maps.ControlPosition.TOP_LEFT].push(addMarkerControlDiv);
     
+    
+    /* Gestion de la base de données (AJAX, PHP, SQL) */
+    /* (Fait apparaître des marqueurs restaurants/bars d'Australie dont les données sont issues d'une bdd) */
+    downloadUrl('./db/api.php', function(data) {
+      var xml = data.responseXML;
+      var markers = xml.documentElement.getElementsByTagName('marker');
+      Array.prototype.forEach.call(markers, function(markerElem) {
+        var name = markerElem.getAttribute('name');
+        var address = markerElem.getAttribute('address');
+        var type = markerElem.getAttribute('type');
+        var point = new google.maps.LatLng(parseFloat(markerElem.getAttribute('lat')), parseFloat(markerElem.getAttribute('lng')));
+
+        var marker = new google.maps.Marker({
+          map: map,
+          position: point
+        });
+      });
+    });
 }
 
 /*	-> VOID - Génère les marqueurs sur la carte
@@ -244,7 +265,8 @@ function CircleFriendsControl(controlDiv,map){
 				    fillOpacity: 0.1,
 				    map: map,
 				    center: CENTER,
-				    radius: rayon
+				    radius: rayon,
+
 			  });
 			  controlUI.title = textesBtn[2];
 			  controlUI.innerHTML = textesBtn[3] ;
@@ -289,3 +311,26 @@ function AddMarkerControl(controlDiv,map){
 	 	 }
 	  });		
 }
+
+/* -> VOID - Fonction utilisant la technologie AJAX pour faire interagir le JS et la base de données
+ * @url      : l'url permettant d'accéder à la ressource utile
+ * @callback : la fonction à lancer en callback une fois la ressource atteinte
+ */
+function downloadUrl(url, callback) {
+	    var request = window.ActiveXObject ?
+	        new ActiveXObject('Microsoft.XMLHTTP') :
+	        new XMLHttpRequest;
+	
+	    request.onreadystatechange = function() {
+	      if (request.readyState == 4) {
+	        request.onreadystatechange = doNothing;
+	        callback(request, request.status);
+	      }
+	    };
+	
+	    request.open('GET', url, true);
+	    request.send(null);
+  }
+
+/* -> VOID - Fonction ne faisant rien */
+function doNothing() {}
