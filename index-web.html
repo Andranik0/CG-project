@@ -1,0 +1,22 @@
+<!-- 
+NOVALSYS PROJECT
+@author : AG
+ -->
+ 
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>CG-Project</title>
+    <meta name="viewport" content="initial-scale=1.0">
+    <meta charset="utf-8">
+    <link rel="stylesheet" type="text/css" href="css/style.css">
+  </head>
+  <body>
+  	<!-- Conteneur de la carte GoogleMaps -->
+    <div id="map"></div>
+    
+	<script type="text/javascript" src="js/index.js"></script>
+    <!--  async permet au navigateur de retourner le reste de ma page pendant le chargement de l'API // callback exécute la fonction initMap une fois que l'API est complètement chargée -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=INSERT-YOUR-KEY-HERE&callback=initMap" async defer></script>
+  </body>
+</html>

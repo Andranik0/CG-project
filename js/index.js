@@ -17,6 +17,10 @@ var markers = []; // Tableau des marqueurs affichés sur la carte
 var circle; // Cercle de la zone d'action (sur laquelle les marqueurs peuvent être aléatoirement positionnés)
 var circleFriends; // Cercle montrant la distance relative des marqueurs positionnés sur la carte
 
+// Gestion du service d'itinéraires
+var directionsDisplay;
+var directionsService; 
+
 // Tableau de données des personnes affichées sur la carte
 var people = [{nom:"Yorick", poste:"FOUNDER & CEO", desc:"Yorick manages the CampusGroups team and also participates in developments and sales. Prior to launching CampusGroups, Yorick accumulated 10 years of experience in Web development, IT consulting and trading at large corporations such as JPMorgan, Accenture and AXA. Yorick earned a Nuclear Engineering Degree from Centrale Marseille (France) and his MBA from NYU Stern School of Business.", sexe:"M"},
 	  {nom:"Claire", poste:"CAMPUS RELATIONS", desc:"Claire is a young professional, close to students needs. She has an Engineering Degree in Computer Science from the Engineering School of Polytech Nice-Sophia, and a Master of Business Administration from Nice College (France), Marketing & Management major. She has had professional experiences in computer science, marketing and communication. She uses all these skills in her daily work at CampusGroups: development, maintenance of the CampusGroups platform and also clients relationship management.", sexe:"F"},
@@ -28,13 +32,17 @@ var people = [{nom:"Yorick", poste:"FOUNDER & CEO", desc:"Yorick manages the Cam
 
 /* -> VOID - Génère la carte et toutes les données lui étant liées */
 function initMap() {
+	directionsService = new google.maps.DirectionsService();
+	directionsDisplay = new google.maps.DirectionsRenderer();
+	
 	// Création de la carte GoogleMaps, définition du centre et du zoom qui conviennent 
     var map = new google.maps.Map(document.getElementById('map'), {center: CENTER, zoom: 14});
-   
+    directionsDisplay.setMap(map);
+    
     // Fait appel à generateRandomMarkers() pour générer les marqueurs aléatoirement sur la carte
     generateRandomMarkers(NUMBER_OF_FRIENDS, CENTER, RADIUS, map);
     
-    
+
     /* Gestion de l'UI */
     
     // Création du bouton permettant de contrôler CenterControl
@@ -64,7 +72,7 @@ function initMap() {
     
     /* Gestion de la base de données (AJAX, PHP, SQL) */
     /* (Fait apparaître des marqueurs restaurants/bars d'Australie dont les données sont issues d'une bdd) */
-    downloadUrl('./db/api.php', function(data) {
+    /*downloadUrl('./db/api.php', function(data) {
       var xml = data.responseXML;
       var markers = xml.documentElement.getElementsByTagName('marker');
       Array.prototype.forEach.call(markers, function(markerElem) {
@@ -78,29 +86,54 @@ function initMap() {
           position: point
         });
       });
-    });
+    });*/
 }
 
-/*	-> VOID - Génère les marqueurs sur la carte
+/*	-> VOID - Génère les marqueurs sur la carte [Récursive]
  *  @nombre : le nombre de marqueurs que l'on veut ajouter (nombre d'amis)
  *  @centre : le lieu (coordonnées latitude et longitude) centre de la zone
  *  @rayon  : le rayon (en mètres) de la zone dans laquelle les marqueurs seront ajoutés 
  *  @carte  : la carte sur laquelle toutes les opérations seront effectuées
  */
 function generateRandomMarkers(nombre, centre, rayon, carte){
+	
+	 var point = randomGeoCoord(centre,rayon);
 
-	 for(i=0;i<nombre;i++){
-		 var point = randomGeoCoord(centre,rayon);
-		 
+	// La fonction calcRoute() fait des appels asynchrones, mais il est essentiel d'obtenir sa valeur de retour pour créer les marqueurs et capturer la durée de trajet des
+	//dits marqueurs jusqu'au centre de la carte CENTER. Par conséquent, l'utilisation d'un callback est ici fondamentale.
+	 calcRoute(point,function(result){
 		 // Ligne utile pour afficher l'icone du marqueur correspondant au sexe de la personne associée
 		 var indexImage=1;
 		 if (people[markers.length].sexe == "M"){ indexImage = 0; }
 		 
 		 // On ajoute au tableau markers chaque nouveau marqueur (qui s'ajoute à la carte en même temps)
-		 var marker = new google.maps.Marker({position:new google.maps.LatLng(point.lat,point.lng), map: carte, icon:images[indexImage], title:"Ami n°"+(markers.length+1), dist:point.dist});
+		 var marker = new google.maps.Marker({position:new google.maps.LatLng(point.lat,point.lng), map: carte, icon:images[indexImage], title:"Ami n°"+(markers.length+1), dist:point.dist, duration:0});
+
+		 marker.duration=result;
 		 addInfoMarker(marker,markers.length);
-		 markers.push(marker);
-	 }
+		 markers.push(marker); 
+		 
+		 generateRandomMarkers(nombre-1,centre,rayon,carte);
+	 });
+}	
+
+
+/* -> INT - Fonction permettant de déterminer la durée des trajets des marqueurs vers le centre
+ * @point : le lieu concerné par l'opération
+ * */
+function calcRoute(point,callback){
+	// Service d'itinéraires
+	var request = {
+	   origin: new google.maps.LatLng(point.lat,point.lng),
+	   destination: CENTER,
+	   travelMode: 'WALKING'
+	 };
+	 directionsService.route(request, function(result, status) {
+	   if (status == 'OK') {
+	     //directionsDisplay.setDirections(result);
+		 callback((result.routes[0].legs[0].duration.value/60).toFixed(0));
+	   }
+	 });
 }
 
 /* -> Retourne un couple latitude/longitude aléatoire 
@@ -124,7 +157,7 @@ function randomGeoCoord(centre, rayon) {
 		
 		var newlat = y + y0;
 		var newlng = x + x0;
-		
+
 		return {
 		    'lat' : newlat.toFixed(5), // toFixed() formate le nombre en notation à point-fixe 
 		    'lng' : newlng.toFixed(5), // i.e arrondit au Nième chiffre après la virgule (ici : 5)
@@ -158,7 +191,8 @@ function addInfoMarker(marker, index){
       '<div id="titleContent"><h1 id="firstHeading" class="firstHeading">'+people[index].nom+'</h1>'+
       '<h2>'+people[index].poste+'</h2></div> <div id="bodyContent"><p>'+people[index].desc+'</p>'+
       '</div> <p><b>DISTANCE :</b> situé(e) à <b>'+marker['dist'].toFixed(0)+'</b>m de l\'Empire State Building'+
-      '<br/><br/> <i>POSITION : </i>'+marker['position']+'</p></div>';
+      '<br/><br/> <i>POSITION : </i>'+marker['position']+
+      '<br/><br/> <i>DUREE DU TRAJET : </i>'+marker['duration']+'min</p></div>';
 
 	  var infowindow = new google.maps.InfoWindow({
 	    content: contentString
@@ -221,7 +255,7 @@ function CenterControl(controlDiv, map) {
 	  var controlUI = document.createElement('div');
 	  controlUI.id = 'controlUI';
 	  controlUI.title = 'Cliquer pour recentrer la carte';
-	  controlUI.innerHTML = '<img  class="icon" src="'+images[2]+'" alt="rencentrer" /> Centrer';
+	  controlUI.innerHTML = '<img  class="icon" src="'+images[2]+'" alt="recentrer" /> Centrer';
 	  controlDiv.appendChild(controlUI);
 
 	  // Au clic sur le bouton Centrer, centre la carte sur CENTER
@@ -331,6 +365,7 @@ function downloadUrl(url, callback) {
 	    request.open('GET', url, true);
 	    request.send(null);
   }
+
 
 /* -> VOID - Fonction ne faisant rien */
 function doNothing() {}
